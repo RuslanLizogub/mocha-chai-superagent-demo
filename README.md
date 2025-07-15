@@ -4,16 +4,20 @@
 
 ## 📋 Table of Contents
 
-- [Description](#description)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Installation](#installation)
-- [Running Tests](#running-tests)
-- [Project Structure](#project-structure)
-- [PageObject Pattern](#pageobject-pattern)
-- [Configuration](#configuration)
-- [Usage Examples](#usage-examples)
-- [Best Practices](#best-practices)
+- [Description](#-description)
+- [Features](#-features)
+- [Architecture](#️-architecture)
+- [Installation](#-installation)
+- [Running Tests](#-running-tests)
+- [Project Structure](#-project-structure)
+- [PageObject Pattern](#-pageobject-pattern)
+- [Configuration](#️-configuration)
+- [Usage Examples](#-usage-examples)
+- [Best Practices](#-best-practices)
+- [Extending the Framework](#-extending-the-framework)
+- [Metrics and Reporting](#-metrics-and-reporting)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ## 🎯 Description
 
