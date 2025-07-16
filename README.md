@@ -1,6 +1,6 @@
 # Mocha, Chai & SuperAgent API Testing Framework
 
-🚀 **Professional API Testing Framework** demonstrating best practices for API test automation using Mocha, Chai, SuperAgent, and PageObject pattern.
+🚀 **Professional API Testing Framework** demonstrating best practices for API test automation using Mocha, Chai, SuperAgent, and API Client pattern.
 
 ## 📋 Table of Contents
 
@@ -10,7 +10,7 @@
 - [Installation](#-installation)
 - [Running Tests](#-running-tests)
 - [Project Structure](#-project-structure)
-- [PageObject Pattern](#-pageobject-pattern)
+- [API Client Pattern](#-api-client-pattern)
 - [Configuration](#️-configuration)
 - [Usage Examples](#-usage-examples)
 - [Best Practices](#-best-practices)
@@ -21,11 +21,11 @@
 
 ## 🎯 Description
 
-This project is a full-featured API testing framework built on modern JavaScript technologies. The framework uses JSONPlaceholder API as a test API and demonstrates a professional approach to test automation.
+This project is a full-featured API testing framework built on modern JavaScript technologies. The framework uses JSONPlaceholder API as a test API and demonstrates a professional approach to test automation using the API Client pattern specifically designed for API testing.
 
 ## ✨ Features
 
-- 🏗️ **PageObject Pattern** - Structured architecture with separation of concerns
+- 🏗️ **API Client Pattern** - Structured architecture with separation of concerns for API testing
 - 🧪 **Complete CRUD Coverage** - Create, Read, Update, Delete tests
 - 🎭 **Multiple Test Types** - Smoke, Regression, Integration, Performance
 - 🔧 **Reusable Utilities** - Data generators, helpers, validators
@@ -46,11 +46,12 @@ test/
 │   └── comments.test.js   # Comment tests
 ├── integration/           # Integration tests
 ├── smoke/                 # Smoke tests
-├── page-objects/          # PageObject classes
-│   ├── base-page-object.js
-│   ├── users-page-object.js
-│   ├── posts-page-object.js
-│   └── comments-page-object.js
+├── api-clients/          # API client classes
+│   ├── base-api.js       # Base API client
+│   ├── users.api.js      # Users API client
+│   ├── posts.api.js      # Posts API client
+│   ├── comments.api.js   # Comments API client
+│   └── index.js          # API clients exports
 ├── utils/                 # Utilities and helpers
 │   ├── http-client.js     # HTTP client
 │   ├── data-generators.js # Test data generators
@@ -159,34 +160,28 @@ SuperAgent wrapper with:
 - Response time measurement
 - Support for all HTTP methods
 
-#### PageObjects (`test/page-objects/`)
+#### API Clients (`test/api-clients/`)
 Encapsulate API logic:
-- **BasePageObject** - Base class with common functionality
-- **UsersPageObject** - User operations
-- **PostsPageObject** - Post operations
-- **CommentsPageObject** - Comment operations
+- **BaseApiClient** - Base class with common functionality
+- **UsersApiClient** - User operations
+- **PostsApiClient** - Post operations
+- **CommentsApiClient** - Comment operations
 
 #### Data Generators (`test/utils/data-generators.js`)
 - Random data generation for tests
 - Invalid data sets for negative testing
 - Validation utilities
 
-## 🎭 PageObject Pattern
+## 🎭 API Client Pattern
 
 ### Usage Example
 
 ```javascript
-const { UsersPageObject } = require('../page-objects')
+const { usersApi } = require('../api-clients')
 
 describe('Users API', function() {
-  let usersPage
-
-  before(function() {
-    usersPage = new UsersPageObject()
-  })
-
   it('should get all users', async function() {
-    const users = await usersPage.getAllUsers()
+    const users = await usersApi.getAll()
     expect(users).to.be.an('array')
   })
 
@@ -197,34 +192,34 @@ describe('Users API', function() {
       email: 'john@example.com'
     }
     
-    const newUser = await usersPage.createUser(userData)
+    const newUser = await usersApi.create(userData)
     expect(newUser.id).to.be.a('number')
   })
 })
 ```
 
-### PageObject Methods
+### API Client Methods
 
-#### UsersPageObject
-- `getAllUsers()` - Get all users
-- `getUserById(id)` - Get user by ID
-- `createUser(userData)` - Create user
-- `updateUser(id, userData)` - Update user
-- `deleteUser(id)` - Delete user
-- `getUserPosts(id)` - Get user posts
+#### UsersApiClient
+- `getAll()` - Get all users
+- `getById(id)` - Get user by ID
+- `create(userData)` - Create user
+- `update(id, userData)` - Update user
+- `delete(id)` - Delete user
+- `getPosts(id)` - Get user posts
 
-#### PostsPageObject
-- `getAllPosts()` - Get all posts
-- `getPostById(id)` - Get post by ID
-- `createPost(postData)` - Create post
-- `getPostsByUserId(userId)` - Get posts by user ID
-- `getPostComments(postId)` - Get post comments
+#### PostsApiClient
+- `getAll()` - Get all posts
+- `getById(id)` - Get post by ID
+- `create(postData)` - Create post
+- `getByUserId(userId)` - Get posts by user ID
+- `getComments(postId)` - Get post comments
 
-#### CommentsPageObject
-- `getAllComments()` - Get all comments
-- `getCommentById(id)` - Get comment by ID
-- `createComment(commentData)` - Create comment
-- `getCommentsByPostId(postId)` - Get comments by post ID
+#### CommentsApiClient
+- `getAll()` - Get all comments
+- `getById(id)` - Get comment by ID
+- `create(commentData)` - Create comment
+- `getByPostId(postId)` - Get comments by post ID
 
 ## ⚙️ Configuration
 
@@ -258,7 +253,7 @@ const { generateRandomUser } = require('../utils/data-generators')
 
 it('should create user with random data', async function() {
   const userData = generateRandomUser()
-  const newUser = await usersPage.createUser(userData)
+  const newUser = await usersApi.create(userData)
   
   expect(newUser.name).to.equal(userData.name)
   expect(newUser.email).to.equal(userData.email)
@@ -269,10 +264,9 @@ it('should create user with random data', async function() {
 
 ```javascript
 it('should respond quickly', async function() {
-  const response = await usersPage.client.get('/users')
+  const users = await usersApi.getAllWithPerformanceCheck(500)
   
-  expect(response).to.have.responseTime(500)
-  expect(response).to.have.successStatus()
+  expect(users).to.be.an('array')
 })
 ```
 
@@ -280,9 +274,10 @@ it('should respond quickly', async function() {
 
 ```javascript
 it('should validate user schema', async function() {
-  const user = await usersPage.getUserById(1)
+  const user = await usersApi.getById(1)
   
-  usersPage.schemaValidations.validateUserSchema(user)
+  // Schema validation is automatically performed in API clients
+  expect(user).to.have.all.keys(['id', 'name', 'username', 'email', 'address', 'phone', 'website', 'company'])
 })
 ```
 
@@ -290,22 +285,16 @@ it('should validate user schema', async function() {
 
 ```javascript
 it('should test user-posts-comments flow', async function() {
-  // Create user
-  const user = await usersPage.createUser(userData)
+  // Get user
+  const user = await usersApi.getById(1)
   
-  // Create post for user
-  const post = await postsPage.createPost({
-    ...postData,
-    userId: user.id
-  })
+  // Get user's posts
+  const posts = await postsApi.getByUserId(user.id)
   
-  // Create comment for post
-  const comment = await commentsPage.createComment({
-    ...commentData,
-    postId: post.id
-  })
+  // Get comments for first post
+  const comments = await commentsApi.getByPostId(posts[0].id)
   
-  expect(comment.postId).to.equal(post.id)
+  expect(comments).to.be.an('array')
 })
 ```
 
@@ -336,16 +325,22 @@ it('should test user-posts-comments flow', async function() {
 - Use clear error messages
 - Document complex logic
 
+### 6. API Client Pattern
+- One client per API resource
+- Consistent method naming (getAll, getById, create, update, delete)
+- Built-in validation and error handling
+- Reusable across test files
+
 ## 🔧 Extending the Framework
 
 ### Adding a new API
-1. Create a new PageObject class
+1. Create a new API client class extending BaseApiClient
 2. Add base URL to configuration
 3. Create tests for the new API
 
 ### Adding a new validation type
 1. Add a new method to `schemaValidations`
-2. Use in PageObjects
+2. Use in API clients
 3. Cover with tests
 
 ### Adding new utilities
@@ -375,4 +370,4 @@ MIT License - see [LICENSE](LICENSE) file.
 
 ---
 
-**🎯 This framework demonstrates a professional approach to API testing and can serve as a foundation for real projects.**
+**🎯 This framework demonstrates a professional approach to API testing using the API Client pattern and can serve as a foundation for real projects.**

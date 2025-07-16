@@ -1,14 +1,9 @@
-const { UsersPageObject, PostsPageObject, CommentsPageObject } = require('../page-objects')
+const { usersApi, postsApi, commentsApi } = require('../api-clients')
 const { testHelpers } = require('../utils/test-helpers')
 const config = require('../../config/test-config')
 
 describe('@smoke API Smoke Tests', function () {
-  let usersPage, postsPage, commentsPage
-
   before(function () {
-    usersPage = new UsersPageObject()
-    postsPage = new PostsPageObject()
-    commentsPage = new CommentsPageObject()
     testHelpers.logTestStep('Initializing Smoke Tests - Critical API Functionality')
   })
 
@@ -17,7 +12,7 @@ describe('@smoke API Smoke Tests', function () {
       testHelpers.logTestStep('🔥 Smoke Test: Users API Health')
       
       const startTime = Date.now()
-      const users = await usersPage.getAllUsers()
+      const users = await usersApi.getAll()
       const responseTime = Date.now() - startTime
       
       expect(users).to.be.an('array')
@@ -31,7 +26,7 @@ describe('@smoke API Smoke Tests', function () {
       testHelpers.logTestStep('🔥 Smoke Test: Posts API Health')
       
       const startTime = Date.now()
-      const posts = await postsPage.getAllPosts()
+      const posts = await postsApi.getAll()
       const responseTime = Date.now() - startTime
       
       expect(posts).to.be.an('array')
@@ -45,7 +40,7 @@ describe('@smoke API Smoke Tests', function () {
       testHelpers.logTestStep('🔥 Smoke Test: Comments API Health')
       
       const startTime = Date.now()
-      const comments = await commentsPage.getCommentsWithPagination(1, 20)
+      const comments = await commentsApi.getWithPagination(1, 20)
       const responseTime = Date.now() - startTime
       
       expect(comments).to.be.an('array')
@@ -61,13 +56,13 @@ describe('@smoke API Smoke Tests', function () {
       testHelpers.logTestStep('🔥 Smoke Test: Core GET Operations')
       
       // Test single entity retrieval
-      const user = await usersPage.getUserById(1)
+      const user = await usersApi.getById(1)
       expect(user.id).to.equal(1)
       
-      const post = await postsPage.getPostById(1)
+      const post = await postsApi.getById(1)
       expect(post.id).to.equal(1)
       
-      const comment = await commentsPage.getCommentById(1)
+      const comment = await commentsApi.getById(1)
       expect(comment.id).to.equal(1)
       
       testHelpers.logTestStep('✅ All GET operations successful')
@@ -77,21 +72,21 @@ describe('@smoke API Smoke Tests', function () {
       testHelpers.logTestStep('🔥 Smoke Test: Core POST Operations')
       
       // Test entity creation
-      const newUser = await usersPage.createUser({
+      const newUser = await usersApi.create({
         name: 'Smoke Test User',
         username: 'smokeuser',
         email: 'smoke@test.com'
       })
       expect(newUser.id).to.be.a('number')
       
-      const newPost = await postsPage.createPost({
+      const newPost = await postsApi.create({
         title: 'Smoke Test Post',
         body: 'Smoke test content',
         userId: 1
       })
       expect(newPost.id).to.be.a('number')
       
-      const newComment = await commentsPage.createComment({
+      const newComment = await commentsApi.create({
         name: 'Smoke Test Comment',
         email: 'smoke@test.com',
         body: 'Smoke test comment',
@@ -106,7 +101,7 @@ describe('@smoke API Smoke Tests', function () {
       testHelpers.logTestStep('🔥 Smoke Test: Core PUT Operations')
       
       // Test entity updates
-      const updatedUser = await usersPage.updateUser(1, {
+      const updatedUser = await usersApi.update(1, {
         name: 'Updated Smoke User',
         username: 'updatedsmokeuser',
         email: 'updated@test.com'
@@ -114,7 +109,7 @@ describe('@smoke API Smoke Tests', function () {
       expect(updatedUser.id).to.equal(1)
       expect(updatedUser.name).to.equal('Updated Smoke User')
       
-      const updatedPost = await postsPage.updatePost(1, {
+      const updatedPost = await postsApi.update(1, {
         title: 'Updated Smoke Post',
         body: 'Updated smoke content',
         userId: 1
@@ -122,7 +117,7 @@ describe('@smoke API Smoke Tests', function () {
       expect(updatedPost.id).to.equal(1)
       expect(updatedPost.title).to.equal('Updated Smoke Post')
       
-      const updatedComment = await commentsPage.updateComment(1, {
+      const updatedComment = await commentsApi.update(1, {
         name: 'Updated Smoke Comment',
         email: 'updated@test.com',
         body: 'Updated smoke comment',
@@ -138,14 +133,14 @@ describe('@smoke API Smoke Tests', function () {
       testHelpers.logTestStep('🔥 Smoke Test: Core DELETE Operations')
       
       // Test entity deletion
-      const deleteUserResponse = await usersPage.deleteUser(1)
-      expect(deleteUserResponse.status).to.equal(200)
+      const deleteResponse1 = await usersApi.delete(1)
+      expect(deleteResponse1.status).to.equal(200)
       
-      const deletePostResponse = await postsPage.deletePost(1)
-      expect(deletePostResponse.status).to.equal(200)
+      const deleteResponse2 = await postsApi.delete(1)
+      expect(deleteResponse2.status).to.equal(200)
       
-      const deleteCommentResponse = await commentsPage.deleteComment(1)
-      expect(deleteCommentResponse.status).to.equal(200)
+      const deleteResponse3 = await commentsApi.delete(1)
+      expect(deleteResponse3.status).to.equal(200)
       
       testHelpers.logTestStep('✅ All DELETE operations successful')
     })
@@ -156,8 +151,8 @@ describe('@smoke API Smoke Tests', function () {
       testHelpers.logTestStep('🔥 Smoke Test: User-Posts Relationship')
       
       const userId = 1
-      const user = await usersPage.getUserById(userId)
-      const userPosts = await postsPage.getPostsByUserId(userId)
+      const user = await usersApi.getById(userId)
+      const userPosts = await postsApi.getByUserId(userId)
       
       expect(user.id).to.equal(userId)
       expect(userPosts).to.be.an('array')
@@ -174,8 +169,8 @@ describe('@smoke API Smoke Tests', function () {
       testHelpers.logTestStep('🔥 Smoke Test: Post-Comments Relationship')
       
       const postId = 1
-      const post = await postsPage.getPostById(postId)
-      const postComments = await commentsPage.getCommentsByPostId(postId)
+      const post = await postsApi.getById(postId)
+      const postComments = await commentsApi.getByPostId(postId)
       
       expect(post.id).to.equal(postId)
       expect(postComments).to.be.an('array')
@@ -194,21 +189,21 @@ describe('@smoke API Smoke Tests', function () {
       testHelpers.logTestStep('🔥 Smoke Test: 404 Error Handling')
       
       try {
-        await usersPage.getUserById(9999)
+        await usersApi.getById(9999)
         expect.fail('Should have thrown 404 error')
       } catch (error) {
         expect(error.response.status).to.equal(404)
       }
       
       try {
-        await postsPage.getPostById(9999)
+        await postsApi.getById(9999)
         expect.fail('Should have thrown 404 error')
       } catch (error) {
         expect(error.response.status).to.equal(404)
       }
       
       try {
-        await commentsPage.getCommentById(9999)
+        await commentsApi.getById(9999)
         expect.fail('Should have thrown 404 error')
       } catch (error) {
         expect(error.response.status).to.equal(404)
@@ -225,22 +220,22 @@ describe('@smoke API Smoke Tests', function () {
       const performanceTests = [
         {
           name: 'Get All Users',
-          test: () => usersPage.getAllUsers(),
+          test: () => usersApi.getAll(),
           threshold: config.performance.medium
         },
         {
           name: 'Get User by ID',
-          test: () => usersPage.getUserById(1),
+          test: () => usersApi.getById(1),
           threshold: config.performance.fast
         },
         {
           name: 'Get Posts by User',
-          test: () => postsPage.getPostsByUserId(1),
+          test: () => postsApi.getByUserId(1),
           threshold: config.performance.fast
         },
         {
           name: 'Get Comments by Post',
-          test: () => commentsPage.getCommentsByPostId(1),
+          test: () => commentsApi.getByPostId(1),
           threshold: config.performance.fast
         }
       ]
@@ -263,15 +258,15 @@ describe('@smoke API Smoke Tests', function () {
       testHelpers.logTestStep('🔥 Smoke Test: Data Structure Integrity')
       
       // Check user structure
-      const user = await usersPage.getUserById(1)
+      const user = await usersApi.getById(1)
       expect(user).to.have.all.keys(['id', 'name', 'username', 'email', 'address', 'phone', 'website', 'company'])
       
       // Check post structure
-      const post = await postsPage.getPostById(1)
+      const post = await postsApi.getById(1)
       expect(post).to.have.all.keys(['userId', 'id', 'title', 'body'])
       
       // Check comment structure
-      const comment = await commentsPage.getCommentById(1)
+      const comment = await commentsApi.getById(1)
       expect(comment).to.have.all.keys(['postId', 'id', 'name', 'email', 'body'])
       
       testHelpers.logTestStep('✅ All data structures are intact')
@@ -280,17 +275,17 @@ describe('@smoke API Smoke Tests', function () {
     it('should verify data type consistency', async function () {
       testHelpers.logTestStep('🔥 Smoke Test: Data Type Consistency')
       
-      const user = await usersPage.getUserById(1)
+      const user = await usersApi.getById(1)
       expect(user.id).to.be.a('number')
       expect(user.name).to.be.a('string')
       expect(user.email).to.be.a('string')
       
-      const post = await postsPage.getPostById(1)
+      const post = await postsApi.getById(1)
       expect(post.id).to.be.a('number')
       expect(post.userId).to.be.a('number')
       expect(post.title).to.be.a('string')
       
-      const comment = await commentsPage.getCommentById(1)
+      const comment = await commentsApi.getById(1)
       expect(comment.id).to.be.a('number')
       expect(comment.postId).to.be.a('number')
       expect(comment.email).to.be.a('string')

@@ -7,7 +7,7 @@ global.assert = chai.assert
 global.should = chai.should()
 
 // Add custom chai assertions if needed
-chai.use(function (chai, utils) {
+chai.use(function (chai, _utils) {
   // Custom assertion for checking response time
   chai.Assertion.addMethod('responseTime', function (expectedTime) {
     const obj = this._obj

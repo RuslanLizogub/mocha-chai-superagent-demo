@@ -1,21 +1,20 @@
-const BasePageObject = require('./base-page-object')
+const BaseApiClient = require('./base-api')
 const config = require('../../config/test-config')
 
 /**
- * Posts Page Object
+ * Posts API Client
  * Handles all post-related API operations
  */
-class PostsPageObject extends BasePageObject {
-  constructor () {
-    super(config.baseUrls.jsonplaceholder)
-    this.endpoint = '/posts'
+class PostsApiClient extends BaseApiClient {
+  constructor() {
+    super(config.baseUrls.jsonplaceholder, '/posts')
   }
 
   /**
    * Get all posts
    * @returns {Promise<Array>} Array of posts
    */
-  async getAllPosts () {
+  async getAll() {
     const response = await this.client.get(this.endpoint)
     const posts = this.validateSuccessResponse(response)
     
@@ -35,7 +34,7 @@ class PostsPageObject extends BasePageObject {
    * @param {number} postId - Post ID
    * @returns {Promise<Object>} Post object
    */
-  async getPostById (postId) {
+  async getById(postId) {
     const response = await this.client.get(`${this.endpoint}/${postId}`)
     const post = this.validateSuccessResponse(response)
     
@@ -50,7 +49,7 @@ class PostsPageObject extends BasePageObject {
    * @param {Object} postData - Post data
    * @returns {Promise<Object>} Created post
    */
-  async createPost (postData) {
+  async create(postData) {
     const response = await this.client.post(this.endpoint, postData)
     const post = this.validateSuccessResponse(response, 201)
     
@@ -69,7 +68,7 @@ class PostsPageObject extends BasePageObject {
    * @param {Object} postData - Updated post data
    * @returns {Promise<Object>} Updated post
    */
-  async updatePost (postId, postData) {
+  async update(postId, postData) {
     const response = await this.client.put(`${this.endpoint}/${postId}`, postData)
     const post = this.validateSuccessResponse(response)
     
@@ -87,7 +86,7 @@ class PostsPageObject extends BasePageObject {
    * @param {Object} postData - Partial post data
    * @returns {Promise<Object>} Updated post
    */
-  async patchPost (postId, postData) {
+  async patch(postId, postData) {
     const response = await this.client.patch(`${this.endpoint}/${postId}`, postData)
     const post = this.validateSuccessResponse(response)
     
@@ -106,7 +105,7 @@ class PostsPageObject extends BasePageObject {
    * @param {number} postId - Post ID
    * @returns {Promise<Object>} Delete response
    */
-  async deletePost (postId) {
+  async delete(postId) {
     const response = await this.client.delete(`${this.endpoint}/${postId}`)
     this.validateSuccessResponse(response)
     
@@ -118,7 +117,7 @@ class PostsPageObject extends BasePageObject {
    * @param {number} userId - User ID
    * @returns {Promise<Array>} User's posts
    */
-  async getPostsByUserId (userId) {
+  async getByUserId(userId) {
     const response = await this.client.get(`${this.endpoint}?userId=${userId}`)
     const posts = this.validateSuccessResponse(response)
     
@@ -136,7 +135,7 @@ class PostsPageObject extends BasePageObject {
    * @param {number} postId - Post ID
    * @returns {Promise<Array>} Post comments
    */
-  async getPostComments (postId) {
+  async getComments(postId) {
     const response = await this.client.get(`${this.endpoint}/${postId}/comments`)
     const comments = this.validateSuccessResponse(response)
     
@@ -154,8 +153,8 @@ class PostsPageObject extends BasePageObject {
    * @param {string} title - Title to search for
    * @returns {Promise<Array>} Matching posts
    */
-  async searchPostsByTitle (title) {
-    const posts = await this.getAllPosts()
+  async searchByTitle(title) {
+    const posts = await this.getAll()
     return posts.filter(post => 
       post.title.toLowerCase().includes(title.toLowerCase())
     )
@@ -167,7 +166,7 @@ class PostsPageObject extends BasePageObject {
    * @param {number} limit - Posts per page
    * @returns {Promise<Array>} Posts array
    */
-  async getPostsWithPagination (page = 1, limit = 10) {
+  async getWithPagination(page = 1, limit = 10) {
     const response = await this.client.get(`${this.endpoint}?_page=${page}&_limit=${limit}`)
     const posts = this.validateSuccessResponse(response)
     
@@ -182,11 +181,62 @@ class PostsPageObject extends BasePageObject {
   }
 
   /**
+   * Get posts sorted by field
+   * @param {string} sortField - Field to sort by
+   * @param {string} sortOrder - Sort order (asc/desc)
+   * @returns {Promise<Array>} Sorted posts
+   */
+  async getSorted(sortField = 'id', sortOrder = 'asc') {
+    const response = await this.client.get(`${this.endpoint}?_sort=${sortField}&_order=${sortOrder}`)
+    const posts = this.validateSuccessResponse(response)
+    
+    expect(posts).to.be.an('array')
+    
+    // Validate sorting (check first few items)
+    if (posts.length > 1) {
+      for (let i = 1; i < Math.min(posts.length, 10); i++) {
+        const current = posts[i][sortField]
+        const previous = posts[i - 1][sortField]
+        
+        if (typeof current === 'string' && typeof previous === 'string') {
+          if (sortOrder === 'asc') {
+            expect(current.localeCompare(previous)).to.be.at.least(-1) // Allow -1 for equal strings
+          } else {
+            expect(current.localeCompare(previous)).to.be.at.most(1) // Allow 1 for equal strings
+          }
+        } else {
+          if (sortOrder === 'asc') {
+            expect(current).to.be.at.least(previous)
+          } else {
+            expect(current).to.be.at.most(previous)
+          }
+        }
+      }
+    }
+    
+    return posts
+  }
+
+  /**
+   * Get posts with performance validation
+   * @param {number} maxResponseTime - Maximum allowed response time
+   * @returns {Promise<Array>} Posts array
+   */
+  async getAllWithPerformanceCheck(maxResponseTime = config.performance.fast) {
+    const response = await this.client.get(this.endpoint)
+    const posts = this.validateSuccessResponse(response)
+    
+    this.validateResponseTime(response, maxResponseTime)
+    
+    return posts
+  }
+
+  /**
    * Verify post doesn't exist
    * @param {number} postId - Post ID
    * @returns {Promise<Object>} Error response
    */
-  async verifyPostNotFound (postId) {
+  async verifyNotFound(postId) {
     return this.expectClientError(
       () => this.client.get(`${this.endpoint}/${postId}`),
       404
@@ -198,52 +248,12 @@ class PostsPageObject extends BasePageObject {
    * @param {Object} invalidData - Invalid post data
    * @returns {Promise<Object>} Error response
    */
-  async createPostWithInvalidData (invalidData) {
+  async createWithInvalidData(invalidData) {
     return this.expectClientError(
       () => this.client.post(this.endpoint, invalidData),
       400
     )
   }
-
-  /**
-   * Get posts with performance validation
-   * @param {number} maxResponseTime - Maximum allowed response time
-   * @returns {Promise<Array>} Posts array
-   */
-  async getAllPostsWithPerformanceCheck (maxResponseTime = config.performance.fast) {
-    const response = await this.client.get(this.endpoint)
-    const posts = this.validateSuccessResponse(response)
-    
-    this.validateResponseTime(response, maxResponseTime)
-    
-    return posts
-  }
-
-  /**
-   * Get posts sorted by field
-   * @param {string} sortField - Field to sort by
-   * @param {string} sortOrder - Sort order (asc/desc)
-   * @returns {Promise<Array>} Sorted posts
-   */
-  async getPostsSorted (sortField = 'id', sortOrder = 'asc') {
-    const response = await this.client.get(`${this.endpoint}?_sort=${sortField}&_order=${sortOrder}`)
-    const posts = this.validateSuccessResponse(response)
-    
-    expect(posts).to.be.an('array')
-    
-    // Validate sorting
-    if (posts.length > 1) {
-      for (let i = 1; i < posts.length; i++) {
-        if (sortOrder === 'asc') {
-          expect(posts[i][sortField]).to.be.at.least(posts[i - 1][sortField])
-        } else {
-          expect(posts[i][sortField]).to.be.at.most(posts[i - 1][sortField])
-        }
-      }
-    }
-    
-    return posts
-  }
 }
 
-module.exports = PostsPageObject
+module.exports = new PostsApiClient() 

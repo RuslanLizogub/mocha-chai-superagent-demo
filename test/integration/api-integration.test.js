@@ -1,14 +1,9 @@
-const { UsersPageObject, PostsPageObject, CommentsPageObject } = require('../page-objects')
+const { usersApi, postsApi, commentsApi } = require('../api-clients')
 const { generateRandomUser, generateRandomPost, generateRandomComment } = require('../utils/data-generators')
 const { testHelpers } = require('../utils/test-helpers')
 
 describe('Integration Tests - User, Posts, and Comments Flow', function () {
-  let usersPage, postsPage, commentsPage
-
   before(function () {
-    usersPage = new UsersPageObject()
-    postsPage = new PostsPageObject()
-    commentsPage = new CommentsPageObject()
     testHelpers.logTestStep('Initializing Integration Tests')
   })
 
@@ -18,25 +13,25 @@ describe('Integration Tests - User, Posts, and Comments Flow', function () {
       testHelpers.logTestStep(`Testing complete relationship for user ID: ${userId}`)
       
       // Step 1: Get user details
-      const user = await usersPage.getUserById(userId)
+      const user = await usersApi.getById(userId)
       expect(user.id).to.equal(userId)
       
       // Step 2: Get user's posts
-      const userPosts = await usersPage.getUserPosts(userId)
+      const userPosts = await usersApi.getPosts(userId)
       expect(userPosts).to.be.an('array')
       expect(userPosts.length).to.be.above(0)
       
       // Step 3: Get posts directly and verify they match
-      const posts = await postsPage.getPostsByUserId(userId)
+      const posts = await postsApi.getByUserId(userId)
       expect(posts).to.have.length(userPosts.length)
       
       // Step 4: Get comments for first post
       const firstPost = posts[0]
-      const postComments = await postsPage.getPostComments(firstPost.id)
+      const postComments = await postsApi.getComments(firstPost.id)
       expect(postComments).to.be.an('array')
       
       // Step 5: Verify comment-post relationship
-      const comments = await commentsPage.getCommentsByPostId(firstPost.id)
+      const comments = await commentsApi.getByPostId(firstPost.id)
       expect(comments).to.have.length(postComments.length)
       
       testHelpers.logTestStep(`✅ Verified relationships: User ${userId} → ${posts.length} posts → ${comments.length} comments per post`)
@@ -47,17 +42,17 @@ describe('Integration Tests - User, Posts, and Comments Flow', function () {
       
       // Step 1: Create a new user
       const userData = generateRandomUser()
-      const newUser = await usersPage.createUser(userData)
+      const newUser = await usersApi.create(userData)
       expect(newUser.id).to.be.a('number')
       
       // Step 2: Create a post for this user
       const postData = generateRandomPost(newUser.id)
-      const newPost = await postsPage.createPost(postData)
+      const newPost = await postsApi.create(postData)
       expect(newPost.userId).to.equal(newUser.id)
       
       // Step 3: Create a comment for this post
       const commentData = generateRandomComment(newPost.id)
-      const newComment = await commentsPage.createComment(commentData)
+      const newComment = await commentsApi.create(commentData)
       expect(newComment.postId).to.equal(newPost.id)
       
       testHelpers.logTestStep(`✅ Created chain: User ${newUser.id} → Post ${newPost.id} → Comment ${newComment.id}`)
@@ -68,10 +63,10 @@ describe('Integration Tests - User, Posts, and Comments Flow', function () {
     it('@integration should verify all users have posts', async function () {
       testHelpers.logTestStep('Verifying all users have posts')
       
-      const users = await usersPage.getAllUsers()
+      const users = await usersApi.getAll()
       
       for (const user of users.slice(0, 3)) { // Test first 3 users for performance
-        const userPosts = await postsPage.getPostsByUserId(user.id)
+        const userPosts = await postsApi.getByUserId(user.id)
         expect(userPosts.length).to.be.above(0, `User ${user.id} should have posts`)
         
         // Verify all posts belong to this user
@@ -84,10 +79,10 @@ describe('Integration Tests - User, Posts, and Comments Flow', function () {
     it('@integration should verify all posts have comments', async function () {
       testHelpers.logTestStep('Verifying all posts have comments')
       
-      const posts = await postsPage.getAllPosts()
+      const posts = await postsApi.getAll()
       
       for (const post of posts.slice(0, 5)) { // Test first 5 posts for performance
-        const postComments = await commentsPage.getCommentsByPostId(post.id)
+        const postComments = await commentsApi.getByPostId(post.id)
         expect(postComments.length).to.be.above(0, `Post ${post.id} should have comments`)
         
         // Verify all comments belong to this post
@@ -100,7 +95,7 @@ describe('Integration Tests - User, Posts, and Comments Flow', function () {
     it('@integration should verify comment email consistency', async function () {
       testHelpers.logTestStep('Verifying comment email consistency')
       
-      const comments = await commentsPage.getAllComments()
+      const comments = await commentsApi.getAll()
       const emailDomains = new Set()
       
       comments.slice(0, 50).forEach(comment => {
@@ -110,7 +105,7 @@ describe('Integration Tests - User, Posts, and Comments Flow', function () {
       })
       
       expect(emailDomains.size).to.be.above(1) // Should have multiple domains
-      testHelpers.logTestStep(`Found ${emailDomains.size} unique email domains`)
+      testHelpers.logTestStep('Found ' + emailDomains.size + ' unique email domains')
     })
   })
 
@@ -120,15 +115,15 @@ describe('Integration Tests - User, Posts, and Comments Flow', function () {
       testHelpers.logTestStep(`Testing user update impact on posts for user ID: ${userId}`)
       
       // Get original user and posts
-      const originalUser = await usersPage.getUserById(userId)
-      const userPosts = await postsPage.getPostsByUserId(userId)
+      const originalUser = await usersApi.getById(userId)
+      const userPosts = await postsApi.getByUserId(userId)
       
       // Update user
       const updatedUserData = { ...originalUser, name: 'Updated Test User' }
-      const updatedUser = await usersPage.updateUser(userId, updatedUserData)
+      await usersApi.update(userId, updatedUserData)
       
       // Verify posts still belong to user
-      const postsAfterUpdate = await postsPage.getPostsByUserId(userId)
+      const postsAfterUpdate = await postsApi.getByUserId(userId)
       expect(postsAfterUpdate).to.have.length(userPosts.length)
       
       postsAfterUpdate.forEach(post => {
@@ -141,15 +136,15 @@ describe('Integration Tests - User, Posts, and Comments Flow', function () {
       testHelpers.logTestStep(`Testing post deletion impact on comments for post ID: ${postId}`)
       
       // Get original comments
-      const originalComments = await commentsPage.getCommentsByPostId(postId)
+      const originalComments = await commentsApi.getByPostId(postId)
       expect(originalComments.length).to.be.above(0)
       
       // Delete post
-      await postsPage.deletePost(postId)
+      await postsApi.delete(postId)
       
       // In JSONPlaceholder, comments will still exist (it's a mock API)
       // In a real API, this might cascade delete or return empty
-      const commentsAfterDelete = await commentsPage.getCommentsByPostId(postId)
+      const commentsAfterDelete = await commentsApi.getByPostId(postId)
       
       // This test documents the behavior - in real API you'd test actual cascade behavior
       testHelpers.logTestStep(`Comments after post deletion: ${commentsAfterDelete.length} (JSONPlaceholder behavior)`)
@@ -164,13 +159,13 @@ describe('Integration Tests - User, Posts, and Comments Flow', function () {
       
       // Get multiple users in parallel
       const userIds = [1, 2, 3, 4, 5]
-      const userPromises = userIds.map(id => usersPage.getUserById(id))
+      const userPromises = userIds.map(id => usersApi.getById(id))
       const users = await Promise.all(userPromises)
       
       expect(users).to.have.length(userIds.length)
       
       // Get all their posts in parallel
-      const postPromises = users.map(user => postsPage.getPostsByUserId(user.id))
+      const postPromises = users.map(user => postsApi.getByUserId(user.id))
       const allPosts = await Promise.all(postPromises)
       
       const endTime = Date.now()
@@ -187,14 +182,14 @@ describe('Integration Tests - User, Posts, and Comments Flow', function () {
       testHelpers.logTestStep('Testing multiple entity creation')
       
       const userData = generateRandomUser()
-      const newUser = await usersPage.createUser(userData)
+      const newUser = await usersApi.create(userData)
       
       // Create multiple posts for this user
       const postPromises = []
       for (let i = 0; i < 3; i++) {
         const postData = generateRandomPost(newUser.id)
         postData.title = `Test Post ${i + 1} for ${newUser.name}`
-        postPromises.push(postsPage.createPost(postData))
+        postPromises.push(postsApi.create(postData))
       }
       
       const newPosts = await Promise.all(postPromises)
@@ -206,7 +201,7 @@ describe('Integration Tests - User, Posts, and Comments Flow', function () {
         for (let i = 0; i < 2; i++) {
           const commentData = generateRandomComment(post.id)
           commentData.name = `Comment ${i + 1} on ${post.title}`
-          commentPromises.push(commentsPage.createComment(commentData))
+          commentPromises.push(commentsApi.create(commentData))
         }
       })
       
@@ -223,14 +218,14 @@ describe('Integration Tests - User, Posts, and Comments Flow', function () {
       
       try {
         // Try to get non-existent user
-        await usersPage.getUserById(9999)
+        await usersApi.getById(9999)
       } catch (error) {
         expect(error.response.status).to.equal(404)
       }
       
       try {
         // Try to get posts for non-existent user
-        const posts = await postsPage.getPostsByUserId(9999)
+        const posts = await postsApi.getByUserId(9999)
         expect(posts).to.be.an('array').that.is.empty
       } catch (error) {
         // Handle if API returns error for non-existent user posts
@@ -242,9 +237,9 @@ describe('Integration Tests - User, Posts, and Comments Flow', function () {
       testHelpers.logTestStep('Validating data integrity across all entities')
       
       // Get sample data from each entity
-      const users = await usersPage.getAllUsers()
-      const posts = await postsPage.getAllPosts()
-      const comments = await commentsPage.getAllComments()
+      const users = await usersApi.getAll()
+      const posts = await postsApi.getAll()
+      const comments = await commentsApi.getAll()
       
       // Verify data consistency
       const userIds = users.map(u => u.id)

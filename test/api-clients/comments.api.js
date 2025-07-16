@@ -1,21 +1,20 @@
-const BasePageObject = require('./base-page-object')
+const BaseApiClient = require('./base-api')
 const config = require('../../config/test-config')
 
 /**
- * Comments Page Object
+ * Comments API Client
  * Handles all comment-related API operations
  */
-class CommentsPageObject extends BasePageObject {
-  constructor () {
-    super(config.baseUrls.jsonplaceholder)
-    this.endpoint = '/comments'
+class CommentsApiClient extends BaseApiClient {
+  constructor() {
+    super(config.baseUrls.jsonplaceholder, '/comments')
   }
 
   /**
    * Get all comments
    * @returns {Promise<Array>} Array of comments
    */
-  async getAllComments () {
+  async getAll() {
     const response = await this.client.get(this.endpoint)
     const comments = this.validateSuccessResponse(response)
     
@@ -35,7 +34,7 @@ class CommentsPageObject extends BasePageObject {
    * @param {number} commentId - Comment ID
    * @returns {Promise<Object>} Comment object
    */
-  async getCommentById (commentId) {
+  async getById(commentId) {
     const response = await this.client.get(`${this.endpoint}/${commentId}`)
     const comment = this.validateSuccessResponse(response)
     
@@ -50,7 +49,7 @@ class CommentsPageObject extends BasePageObject {
    * @param {Object} commentData - Comment data
    * @returns {Promise<Object>} Created comment
    */
-  async createComment (commentData) {
+  async create(commentData) {
     const response = await this.client.post(this.endpoint, commentData)
     const comment = this.validateSuccessResponse(response, 201)
     
@@ -70,7 +69,7 @@ class CommentsPageObject extends BasePageObject {
    * @param {Object} commentData - Updated comment data
    * @returns {Promise<Object>} Updated comment
    */
-  async updateComment (commentId, commentData) {
+  async update(commentId, commentData) {
     const response = await this.client.put(`${this.endpoint}/${commentId}`, commentData)
     const comment = this.validateSuccessResponse(response)
     
@@ -89,7 +88,7 @@ class CommentsPageObject extends BasePageObject {
    * @param {Object} commentData - Partial comment data
    * @returns {Promise<Object>} Updated comment
    */
-  async patchComment (commentId, commentData) {
+  async patch(commentId, commentData) {
     const response = await this.client.patch(`${this.endpoint}/${commentId}`, commentData)
     const comment = this.validateSuccessResponse(response)
     
@@ -108,7 +107,7 @@ class CommentsPageObject extends BasePageObject {
    * @param {number} commentId - Comment ID
    * @returns {Promise<Object>} Delete response
    */
-  async deleteComment (commentId) {
+  async delete(commentId) {
     const response = await this.client.delete(`${this.endpoint}/${commentId}`)
     this.validateSuccessResponse(response)
     
@@ -120,7 +119,7 @@ class CommentsPageObject extends BasePageObject {
    * @param {number} postId - Post ID
    * @returns {Promise<Array>} Post comments
    */
-  async getCommentsByPostId (postId) {
+  async getByPostId(postId) {
     const response = await this.client.get(`${this.endpoint}?postId=${postId}`)
     const comments = this.validateSuccessResponse(response)
     
@@ -138,8 +137,8 @@ class CommentsPageObject extends BasePageObject {
    * @param {string} email - Email to search for
    * @returns {Promise<Array>} Matching comments
    */
-  async searchCommentsByEmail (email) {
-    const comments = await this.getAllComments()
+  async searchByEmail(email) {
+    const comments = await this.getAll()
     return comments.filter(comment => 
       comment.email.toLowerCase().includes(email.toLowerCase())
     )
@@ -151,7 +150,7 @@ class CommentsPageObject extends BasePageObject {
    * @param {number} limit - Comments per page
    * @returns {Promise<Array>} Comments array
    */
-  async getCommentsWithPagination (page = 1, limit = 10) {
+  async getWithPagination(page = 1, limit = 10) {
     const response = await this.client.get(`${this.endpoint}?_page=${page}&_limit=${limit}`)
     const comments = this.validateSuccessResponse(response)
     
@@ -166,11 +165,62 @@ class CommentsPageObject extends BasePageObject {
   }
 
   /**
+   * Get comments sorted by field
+   * @param {string} sortField - Field to sort by
+   * @param {string} sortOrder - Sort order (asc/desc)
+   * @returns {Promise<Array>} Sorted comments
+   */
+  async getSorted(sortField = 'id', sortOrder = 'asc') {
+    const response = await this.client.get(`${this.endpoint}?_sort=${sortField}&_order=${sortOrder}`)
+    const comments = this.validateSuccessResponse(response)
+    
+    expect(comments).to.be.an('array')
+    
+    // Validate sorting (check first few items)
+    if (comments.length > 1) {
+      for (let i = 1; i < Math.min(comments.length, 10); i++) {
+        const current = comments[i][sortField]
+        const previous = comments[i - 1][sortField]
+        
+        if (typeof current === 'string' && typeof previous === 'string') {
+          if (sortOrder === 'asc') {
+            expect(current.localeCompare(previous)).to.be.at.least(-1) // Allow -1 for equal strings
+          } else {
+            expect(current.localeCompare(previous)).to.be.at.most(1) // Allow 1 for equal strings
+          }
+        } else {
+          if (sortOrder === 'asc') {
+            expect(current).to.be.at.least(previous)
+          } else {
+            expect(current).to.be.at.most(previous)
+          }
+        }
+      }
+    }
+    
+    return comments
+  }
+
+  /**
+   * Get comments with performance validation
+   * @param {number} maxResponseTime - Maximum allowed response time
+   * @returns {Promise<Array>} Comments array
+   */
+  async getAllWithPerformanceCheck(maxResponseTime = config.performance.fast) {
+    const response = await this.client.get(this.endpoint)
+    const comments = this.validateSuccessResponse(response)
+    
+    this.validateResponseTime(response, maxResponseTime)
+    
+    return comments
+  }
+
+  /**
    * Verify comment doesn't exist
    * @param {number} commentId - Comment ID
    * @returns {Promise<Object>} Error response
    */
-  async verifyCommentNotFound (commentId) {
+  async verifyNotFound(commentId) {
     return this.expectClientError(
       () => this.client.get(`${this.endpoint}/${commentId}`),
       404
@@ -182,7 +232,7 @@ class CommentsPageObject extends BasePageObject {
    * @param {Object} invalidData - Invalid comment data
    * @returns {Promise<Object>} Error response
    */
-  async createCommentWithInvalidData (invalidData) {
+  async createWithInvalidData(invalidData) {
     return this.expectClientError(
       () => this.client.post(this.endpoint, invalidData),
       400
@@ -190,63 +240,12 @@ class CommentsPageObject extends BasePageObject {
   }
 
   /**
-   * Get comments with performance validation
-   * @param {number} maxResponseTime - Maximum allowed response time
-   * @returns {Promise<Array>} Comments array
-   */
-  async getAllCommentsWithPerformanceCheck (maxResponseTime = config.performance.fast) {
-    const response = await this.client.get(this.endpoint)
-    const comments = this.validateSuccessResponse(response)
-    
-    this.validateResponseTime(response, maxResponseTime)
-    
-    return comments
-  }
-
-  /**
-   * Get comments sorted by field
-   * @param {string} sortField - Field to sort by
-   * @param {string} sortOrder - Sort order (asc/desc)
-   * @returns {Promise<Array>} Sorted comments
-   */
-  async getCommentsSorted (sortField = 'id', sortOrder = 'asc') {
-    const response = await this.client.get(`${this.endpoint}?_sort=${sortField}&_order=${sortOrder}`)
-    const comments = this.validateSuccessResponse(response)
-    
-    expect(comments).to.be.an('array')
-    
-    // Validate sorting
-    if (comments.length > 1) {
-      for (let i = 1; i < comments.length; i++) {
-        if (sortOrder === 'asc') {
-          expect(comments[i][sortField]).to.be.at.least(comments[i - 1][sortField])
-        } else {
-          expect(comments[i][sortField]).to.be.at.most(comments[i - 1][sortField])
-        }
-      }
-    }
-    
-    return comments
-  }
-
-  /**
-   * Validate comment email format
-   * @param {Object} comment - Comment object
-   * @returns {boolean} Is valid email
-   */
-  validateCommentEmail (comment) {
-    const { isValidEmail } = require('../utils/data-generators')
-    expect(isValidEmail(comment.email)).to.be.true
-    return true
-  }
-
-  /**
    * Get comments statistics for a post
    * @param {number} postId - Post ID
    * @returns {Promise<Object>} Comments statistics
    */
-  async getCommentsStatistics (postId) {
-    const comments = await this.getCommentsByPostId(postId)
+  async getStatistics(postId) {
+    const comments = await this.getByPostId(postId)
     
     return {
       total: comments.length,
@@ -258,6 +257,17 @@ class CommentsPageObject extends BasePageObject {
         current.body.length < shortest.body.length ? current : shortest, comments[0])
     }
   }
+
+  /**
+   * Validate comment email format
+   * @param {Object} comment - Comment object
+   * @returns {boolean} Is valid email
+   */
+  validateEmail(comment) {
+    const { isValidEmail } = require('../utils/data-generators')
+    expect(isValidEmail(comment.email)).to.be.true
+    return true
+  }
 }
 
-module.exports = CommentsPageObject
+module.exports = new CommentsApiClient() 

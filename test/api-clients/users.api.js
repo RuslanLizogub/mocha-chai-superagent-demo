@@ -1,21 +1,20 @@
-const BasePageObject = require('./base-page-object')
+const BaseApiClient = require('./base-api')
 const config = require('../../config/test-config')
 
 /**
- * Users Page Object
+ * Users API Client
  * Handles all user-related API operations
  */
-class UsersPageObject extends BasePageObject {
-  constructor () {
-    super(config.baseUrls.jsonplaceholder)
-    this.endpoint = '/users'
+class UsersApiClient extends BaseApiClient {
+  constructor() {
+    super(config.baseUrls.jsonplaceholder, '/users')
   }
 
   /**
    * Get all users
    * @returns {Promise<Array>} Array of users
    */
-  async getAllUsers () {
+  async getAll() {
     const response = await this.client.get(this.endpoint)
     const users = this.validateSuccessResponse(response)
     
@@ -35,7 +34,7 @@ class UsersPageObject extends BasePageObject {
    * @param {number} userId - User ID
    * @returns {Promise<Object>} User object
    */
-  async getUserById (userId) {
+  async getById(userId) {
     const response = await this.client.get(`${this.endpoint}/${userId}`)
     const user = this.validateSuccessResponse(response)
     
@@ -50,7 +49,7 @@ class UsersPageObject extends BasePageObject {
    * @param {Object} userData - User data
    * @returns {Promise<Object>} Created user
    */
-  async createUser (userData) {
+  async create(userData) {
     const response = await this.client.post(this.endpoint, userData)
     const user = this.validateSuccessResponse(response, 201)
     
@@ -69,7 +68,7 @@ class UsersPageObject extends BasePageObject {
    * @param {Object} userData - Updated user data
    * @returns {Promise<Object>} Updated user
    */
-  async updateUser (userId, userData) {
+  async update(userId, userData) {
     const response = await this.client.put(`${this.endpoint}/${userId}`, userData)
     const user = this.validateSuccessResponse(response)
     
@@ -87,7 +86,7 @@ class UsersPageObject extends BasePageObject {
    * @param {Object} userData - Partial user data
    * @returns {Promise<Object>} Updated user
    */
-  async patchUser (userId, userData) {
+  async patch(userId, userData) {
     const response = await this.client.patch(`${this.endpoint}/${userId}`, userData)
     const user = this.validateSuccessResponse(response)
     
@@ -106,7 +105,7 @@ class UsersPageObject extends BasePageObject {
    * @param {number} userId - User ID
    * @returns {Promise<Object>} Delete response
    */
-  async deleteUser (userId) {
+  async delete(userId) {
     const response = await this.client.delete(`${this.endpoint}/${userId}`)
     this.validateSuccessResponse(response)
     
@@ -114,24 +113,12 @@ class UsersPageObject extends BasePageObject {
   }
 
   /**
-   * Verify user doesn't exist
-   * @param {number} userId - User ID
-   * @returns {Promise<Object>} Error response
-   */
-  async verifyUserNotFound (userId) {
-    return this.expectClientError(
-      () => this.client.get(`${this.endpoint}/${userId}`),
-      404
-    )
-  }
-
-  /**
    * Search users by name
    * @param {string} name - Name to search for
    * @returns {Promise<Array>} Matching users
    */
-  async searchUsersByName (name) {
-    const users = await this.getAllUsers()
+  async searchByName(name) {
+    const users = await this.getAll()
     return users.filter(user => 
       user.name.toLowerCase().includes(name.toLowerCase())
     )
@@ -142,7 +129,7 @@ class UsersPageObject extends BasePageObject {
    * @param {number} userId - User ID
    * @returns {Promise<Array>} User's posts
    */
-  async getUserPosts (userId) {
+  async getPosts(userId) {
     const response = await this.client.get(`${this.endpoint}/${userId}/posts`)
     const posts = this.validateSuccessResponse(response)
     
@@ -159,7 +146,7 @@ class UsersPageObject extends BasePageObject {
    * @param {number} userId - User ID
    * @returns {Promise<Array>} User's albums
    */
-  async getUserAlbums (userId) {
+  async getAlbums(userId) {
     const response = await this.client.get(`${this.endpoint}/${userId}/albums`)
     const albums = this.validateSuccessResponse(response)
     
@@ -172,23 +159,11 @@ class UsersPageObject extends BasePageObject {
   }
 
   /**
-   * Validate user creation with invalid data
-   * @param {Object} invalidData - Invalid user data
-   * @returns {Promise<Object>} Error response
-   */
-  async createUserWithInvalidData (invalidData) {
-    return this.expectClientError(
-      () => this.client.post(this.endpoint, invalidData),
-      400
-    )
-  }
-
-  /**
    * Get users with performance validation
    * @param {number} maxResponseTime - Maximum allowed response time
    * @returns {Promise<Array>} Users array
    */
-  async getAllUsersWithPerformanceCheck (maxResponseTime = config.performance.fast) {
+  async getAllWithPerformanceCheck(maxResponseTime = config.performance.fast) {
     const response = await this.client.get(this.endpoint)
     const users = this.validateSuccessResponse(response)
     
@@ -196,6 +171,30 @@ class UsersPageObject extends BasePageObject {
     
     return users
   }
+
+  /**
+   * Verify user doesn't exist
+   * @param {number} userId - User ID
+   * @returns {Promise<Object>} Error response
+   */
+  async verifyNotFound(userId) {
+    return this.expectClientError(
+      () => this.client.get(`${this.endpoint}/${userId}`),
+      404
+    )
+  }
+
+  /**
+   * Create user with invalid data
+   * @param {Object} invalidData - Invalid user data
+   * @returns {Promise<Object>} Error response
+   */
+  async createWithInvalidData(invalidData) {
+    return this.expectClientError(
+      () => this.client.post(this.endpoint, invalidData),
+      400
+    )
+  }
 }
 
-module.exports = UsersPageObject
+module.exports = new UsersApiClient() 

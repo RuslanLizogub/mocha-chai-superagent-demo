@@ -77,7 +77,7 @@ function generateRandomPost (userId = 1) {
   return {
     title: generateRandomString(20),
     body: generateRandomString(100),
-    userId: userId
+    userId
   }
 }
 
@@ -91,7 +91,7 @@ function generateRandomComment (postId = 1) {
     name: generateRandomString(15),
     email: generateRandomEmail(),
     body: generateRandomString(80),
-    postId: postId
+    postId
   }
 }
 

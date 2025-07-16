@@ -50,7 +50,7 @@ const config = {
   // Expected response times (in milliseconds)
   performance: {
     fast: 500,
-    medium: 1000,
+    medium: 1500, // Increased to accommodate network latency
     slow: 3000
   }
 }
